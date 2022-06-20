@@ -3,7 +3,7 @@
 
 
 def pascal_triangle(n):
-    """returns a list of lists containing eeach row 
+    """returns a list of lists containing eeach row
     of the pascal's triangle"""
     if n <= 0:
         return []
