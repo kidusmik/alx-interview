@@ -1,54 +1,67 @@
 #!/usr/bin/python3
-
+"""a script that reads stdin line by line and computes metrics"""
 import sys
+import re
+from datetime import datetime
 
 
-def print_msg(dict_sc, total_file_size):
-    """
-    Method to print
-    Args:
-        dict_sc: dict of status codes
-        total_file_size: total of the file
-    Returns:
-        Nothing
-    """
-
-    print("File size: {}".format(total_file_size))
-    for key, val in sorted(dict_sc.items()):
-        if val != 0:
-            print("{}: {}".format(key, val))
+status_code = {
+    '200': 0,
+    '301': 0,
+    '400': 0,
+    '401': 0,
+    '403': 0,
+    '404': 0,
+    '405': 0,
+    '500': 0,
+}
+file_size = 0
+on_ten = 0
 
 
-total_file_size = 0
-code = 0
-counter = 0
-dict_sc = {"200": 0,
-           "301": 0,
-           "400": 0,
-           "401": 0,
-           "403": 0,
-           "404": 0,
-           "405": 0,
-           "500": 0}
+def check_ip(ip):
+    """validate ip address"""
+    pattern = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)"\
+        r"{3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+    if (re.search(pattern, ip)):
+        return True
+    return False
+
+
+def display_metrics():
+    """display the metrics"""
+    print(f'File size: {file_size}')
+    for k, v in status_code.items():
+        if v:
+            print(f'{k}: {v}')
+
 
 try:
-    for line in sys.stdin:
-        parsed_line = line.split()  # ✄ trimming
-        parsed_line = parsed_line[::-1]  # inverting
-
-        if len(parsed_line) > 2:
-            counter += 1
-
-            if counter <= 10:
-                total_file_size += int(parsed_line[0])  # file size
-                code = parsed_line[1]  # status code
-
-                if (code in dict_sc.keys()):
-                    dict_sc[code] += 1
-
-            if (counter == 10):
-                print_msg(dict_sc, total_file_size)
-                counter = 0
-
-finally:
-    print_msg(dict_sc, total_file_size)
+    for lines in sys.stdin:
+        line = lines.split(' ')
+        ip = line[0]
+        dates = line[2][1:] + line[3][:-1]
+        dates = datetime.strptime(dates, "%Y-%m-%d%H:%M:%S.%f")
+        minus = line[1]
+        method = line[4][1:]
+        path = line[5]
+        http = line[6][:-1]
+        code = line[7]
+        size = line[-1].split('\\')[0]
+        if minus == '-' and code in status_code and \
+                http == 'HTTP/1.1' and method == 'GET' and \
+                    check_ip(ip) and isinstance(dates, datetime) \
+                        and path == '/projects/260':
+            if on_ten == 10:
+                display_metrics()
+                on_ten = 0
+            status_code[code] += 1
+            file_size += int(size)
+            on_ten += 1
+        else:
+            print(ip, dates, minus, method, path, http, code, size)
+except KeyboardInterrupt:
+    display_metrics()
+    sys.exit(1)
+else:
+    display_metrics()
